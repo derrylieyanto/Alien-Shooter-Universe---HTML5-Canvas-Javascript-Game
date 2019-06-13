@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>SPACE SHOOTER</title>
+    <link rel="stylesheet" type="text/css" href="styleDasar.css">
+    <style>
+        #canvas{
+            background-color: #ebebeb;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+        <canvas id="canvas" width="1080" height="550"></canvas>
+        <script src="utils.js"></script>
+        <script src="ship.js"></script>
+        <script src="obstacle.js"></script>
+        <script src="shoot.js"></script>
+        <script src="input.js"></script>
+        <script src="background.js"></script>
+        <script src="sound.js"></script>
+       
+        <script>
+            window.onload = function(){
+                var canvas=document.getElementById('canvas'),
+                    context=canvas.getContext('2d'),
+                    mouse = utils.captureMouse(canvas),
+                    ship= new Ship(),
+                    input = new Input(),
+                    balls = [],
+                    balls2 = [],
+                    balls3 = [],
+                    shields = [],
+                    powerUps = [],
+                    fire = [],
+                    numBall = 0,
+                    numBall2 = 0,
+                    numBall3 = 0,
+                    numShield = 0,
+                    numPU = 0,
+                    flag = 0,
+                    isFinish = false,
+                  
+                    score = 0,
+                    multi = 1,
+                    shieldTime = 0,
+                    bg = new Background(),
+                    pu;
+                var interval,
+                    interval2,
+                    interval3,
+                    interval4,
+                    interval5,
+                    intervalShield,
+                    intervalTimerShield,
+                    timeOutShield,
+                    timeOutPU;
+                var soundExplode = new Sound("sound/explodeChar.mp3"),
+                    soundExplode1 = new Sound("sound/explode1.mp3"),
+                    soundExplode2 = new Sound("sound/explode2.mp3"),
+                    soundExplode3 = new Sound("sound/explode2.mp3"),
+                    soundEnemyHit = new Sound("sound/enemy3hit.mp3"),
+                    soundEnemyDie = new Sound("sound/enemy2hit.mp3"),
+                    soundCharHit = new Sound("sound/characterhit.mp3"),
+                    soundEnemy = new Sound("sound/shootEnemy.mp3"),
+                    bgsound = new Audio("sound/nyancat.mp3"),
+                    soundPU = new Sound("sound/powerup.mp3"),
+                    soundShield = new Sound("sound/generateshield.mp3");
+                
+                    bgsound.volume = 0.5;
+                 
+                if (typeof bgsound.loop == 'boolean')
+                {
+                    bgsound.loop = true;
+                }
+                else
+                {
+                    bgsound.addEventListener('ended', function() {
+                        this.currentTime = 0;
+                        this.play();
+                    }, false);
+                }
+                
+                
+               
+
+                function distBetweenPoints(x1, y1, x2, y2){
+                    return Math.sqrt(Math.pow(x2 - x1, 2)+ Math.pow(y2 - y1, 2));
+                }
+
+                function checkSummon(x,y){
+                    if(x == ship.x && y == ship.y){
+                        x = Math.random() * canvas.width;
+                        y = Math.random() * canvas.height;
+                    }
+                }
+
+                function summon(){
+                    ball = new Obs(60);
+                    ball.id = "ball" + numBall;
+                    ball.x  = Math.random() * canvas.width;
+                    ball.y  = Math.random() * canvas.height;
+                    checkSummon(ball.x,ball.y);
+                    ball.speed = 0.1;
+                    ball.live = 5;
+                    ball.jenis = 1;
+                    balls.push(ball);
+                    numBall += 1;
+                    
+                }
+
+                function summon2(){
+                    ball = new Obs(40, 0x00ff00);
+                    ball.id = "ball" + numBall2;
+                    ball.x  = Math.random() * canvas.width;
+                    ball.y  = Math.random() * canvas.height;
+                    checkSummon(ball.x,ball.y);
+                    ball.speed = 1.5;
+                    ball.jenis = 2;
+                    ball.live = 3;
+                    balls2.push(ball);
+                    numBall2 += 1;
+                    
+                }
+
+                function summon3(){
+                    ball = new Obs(30, 0x0000ff);
+                    ball.id = "ball" + numBall3;
+                    ball.x  = Math.random() * canvas.width;
+                    ball.y  = Math.random() * canvas.height;
+                    checkSummon(ball.x,ball.y);
+                    ball.speed = 2.5;
+                    ball.jenis = 3;
+                    ball.live = 2;
+                    balls3.push(ball);
+                    numBall3 += 1;
+                    
+                }
+
+                function summonShield(){
+                    ball = new Obs(20, 0x0000ff);
+                    ball.id = "ball" + numShield;
+                    ball.x  = Math.random() * canvas.width;
+                    ball.y  = Math.random() * canvas.height;
+                    checkSummon(ball.x,ball.y);
+                    ball.speed = 0;
+                    ball.jenis = 4;
+                    ball.live = 1;
+                    shields.push(ball);
+                    numShield += 1;
+                    
+                }
+
+                function summonPower(){
+                    ball = new Obs(30, 0x0000ff);
+                    ball.id = "ball" + numPU;
+                    ball.x  = Math.random() * canvas.width;
+                    ball.y  = Math.random() * canvas.height;
+                    checkSummon(ball.x,ball.y);
+                    ball.speed = 0;
+                    ball.jenis = 5;
+                    ball.live = 1;
+                    powerUps.push(ball);
+                    numPU += 1;
+                    
+                }
+                
+                function explodeBall(ball,pos){
+                    if(ball.live == 0){
+                        switch(ball.jenis){
+                            case 1: balls.splice(pos, 1);
+                                    soundEnemyDie.stop();
+                                    soundEnemyDie.play();
+                                    score = score + (10 * multi);
+                                    multi += 0.1;
+                                    break;
+                            case 2: balls2.splice(pos, 1);
+                                    soundEnemyDie.stop();
+                                    soundEnemyDie.play();
+                                    score = score + (15 * multi);
+                                    multi += 0.2;
+                                    break;
+                            case 3: balls3.splice(pos, 1);
+                                    soundEnemyDie.stop();
+                                    soundEnemyDie.play();
+                                    score = score + (20 * multi);
+                                    multi += 0.3;
+                                    break;
+                        }
+                    }
+                    
+                }
+
+                function gameEnd(){
+                    clearInterval(interval2);
+                    clearInterval(interval3);
+                    clearInterval(interval4);
+                    clearInterval(interval5);
+                    flag = 2;
+                }
+
+               
+
+
+                function drawBall(ball, pos){
+                    ball.update();
+                    var dx1 = ship.x - ball.x,
+                        dy1 = ship.y - ball.y;
+                    angle = Math.atan2(dy1, dx1);
+                    ball.vx = Math.cos(angle) * ball.speed;
+                    ball.vy = Math.sin(angle) * ball.speed;
+                            
+                    ball.draw(context);
+
+
+                    for (var i = 0; i < ship.balls.length; i++){
+                        if(distBetweenPoints(ball.x, ball.y, ship.balls[i].x, ship.balls[i].y) < ball.radius + ship.balls[i].radius){
+                            if(ball.jenis == 4 || ball.jenis == 5){
+
+                            }else{
+                                if(ball.live > 1){
+                                    soundEnemyHit.stop();
+                                    soundEnemyHit.play();
+                                }
+                               
+                                    ball.live -= 1;
+                                    ship.balls.splice(i,1);
+                                    explodeBall(ball,pos);
+                                
+                            }
+                            
+                        }
+                    
+                    }
+                    if(distBetweenPoints(ship.x, ship.y, ball.x, ball.y) < ship.radius + ball.radius){
+                        if(ship.shield == false){
+                            if(ball.jenis == 4 || ball.jenis == 5){
+                                
+                            }else{
+                                ship.live -= 1;
+                            }
+                            
+                        }
+                        
+                        soundCharHit.stop();
+                        soundCharHit.play();
+                        if(ship.live == 0){
+                            soundExplode.stop();
+                            soundExplode.play();
+                            gameEnd();
+                        }else{
+                            switch(ball.jenis){
+                                case 1: balls.splice(pos, 1);
+                                        soundExplode1.stop();
+                                        soundExplode1.play();
+                                        break;
+                                case 2: balls2.splice(pos, 1);
+                                        soundExplode2.stop();
+                                        soundExplode2.play();
+                                        break;
+                                case 3: balls3.splice(pos, 1);
+                                        soundExplode3.stop();
+                                        soundExplode3.play();
+                                        break;
+                                case 4: shields.splice(pos, 1);
+                                        soundShield.stop();
+                                        soundShield.play();
+                                        ship.shield = true;
+                                        shieldTime = 500;
+                                        intervalTimerShield= setInterval(timerShield,10);
+                                        timeOutShield = setTimeout(stopShield,5000);
+                                        break;
+                                case 5: powerUps.splice(pos,1);
+                                        soundPU.stop();
+                                        soundPU.play();
+                                        ship.powerUp = true;
+                                        break;
+                            }
+                           
+                        }
+                    }
+                }
+                    
+                    
+                ship.x = canvas.width/2;
+                ship.y = canvas.height/2;
+
+                canvas.addEventListener('mousedown',mouseDown);
+                
+                function mouseDown(event){
+                    ship.shoot(true,mouse.x,mouse.y);    
+                    interval = setInterval(fires,300);   
+                }
+
+                function fires(){
+                    ship.shoot(true,mouse.x,mouse.y);
+                }
+
+                function ObsFire(x,y,ballX,ballY){
+                        soundEnemy.stop();
+                        var s = new Ball(10,0xff0000);
+                        var dx = x - ballX,
+                            dy = y - ballY,
+                            angle = Math.atan2(dy, dx);
+                        s.rotation = angle;
+                        s.x = ballX;
+                        s.y = ballY;
+                        s.jenis = 2;
+                        s.dx = Math.cos(angle);
+                        s.dy = Math.sin(angle);
+                        s.vx = s.dx * 2;
+                        s.vy = s.dy * 2;
+                        fire.push(s);
+                        soundEnemy.play();
+                    
+                }
+
+                function intervalObs(){
+                    var i = balls.length;
+                    while (i--) {
+                        ObsFire(ship.x, ship.y, balls[i].x, balls[i].y);
+                    }
+                    
+                }
+
+                function ObsFireDraw(context){
+                    for (var i = 0; i < fire.length; i++){
+                        fire[i].draw(context);
+                    }
+                }
+
+                function ObsFireUpdate(){
+                    for (var i = 0; i < fire.length; i++){
+                        if(!fire[i].update()){
+                            fire.splice(i,1);
+                        }
+                        
+                        if(distBetweenPoints(ship.x, ship.y, fire[i].x, fire[i].y) < ship.radius + fire[i].radius){
+                            if(ship.shield == false){
+                                ship.live -= 1;
+                            }
+                            if(ship.live == 0){
+                                gameEnd();
+                            }
+                            fire.splice(i,1);
+                            
+                        }
+                    
+                    
+                    }
+                }
+
+                function stopShield(){
+                    ship.shield = false;
+                    clearInterval(intervalTimerShield);
+                    shieldTime = 500;
+                }
+
+                function timerShield(){
+                    shieldTime -= 1;
+                }
+
+                canvas.addEventListener('mouseup', function () {
+                    ship.shoot(false,mouse.x,mouse.y);
+                    clearInterval(interval);
+                }, false);        
+               
+                window.addEventListener('keydown', function (event) {
+                    handleEnter(event);
+                    input.set(event,true);
+                }, false);
+
+                window.addEventListener('keyup', function () {
+                    input.set(event,false);
+                    input.vx = 0;
+                    input.vy = 0;
+                }, false);
+
+                function handleEnter(e){
+                    var keycode = (e.keyCode ? e.keyCode : e.which);
+                    if (keycode == '13') {
+                        bgsound.play();
+                        interval2 = setInterval(summon,3000);
+                        interval5 = setInterval(intervalObs,3000);
+                        interval3 = setInterval(summon2,5000);
+                        interval4 = setInterval(summon3,8000);
+                        intervalShield = setInterval(summonShield,15000);
+                        timeOutPU = setTimeout(summonPower,30000);
+                        flag = 1;
+                    }
+                }
+
+                var hp = new Image(),
+                    sh = new Image(),
+                    logo = new Image();
+                hp.src = "images/heart.png";
+                sh.src = "images/tamengdewa.png";
+                logo.src = "images/logo.png";
+ 
+                (function drawFrame () {
+                    window.requestAnimationFrame(drawFrame, canvas);
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    bg.draw(context);
+                    bg.update(input);
+                    
+
+                    switch(ship.live){
+                        case 1: context.drawImage(hp, 900, 5, 35, 38);
+                                break;
+                        case 2: context.drawImage(hp, 900, 5, 35, 38);
+                                context.drawImage(hp, 950, 5, 35, 38);
+                                break;
+                        case 3: context.drawImage(hp, 900, 5, 35, 38);
+                                context.drawImage(hp, 950, 5, 35, 38);
+                                context.drawImage(hp, 1000, 5, 35, 38);
+                                break;
+                    }
+                    
+                    var s = "Score: " + score.toString() ,
+                        m = "x" + multi.toFixed(2).toString();
+                    
+
+                    context.font = 'bold 18px Arial';
+                    context.textAlign = 'left';
+                    context.textBaseline = 'middle';
+                    context.fillStyle = 'white';  // a color name or by using rgb/rgba/hex values
+                    context.fillText(s, 10, 15);
+
+                    context.font = 'bold 18px Arial';
+                    context.textAlign = 'left';
+                    context.textBaseline = 'middle';
+                    context.fillStyle = 'white';  // a color name or by using rgb/rgba/hex values
+                    context.fillText(m, 400, 15);
+
+                    if(ship.shield){
+                        context.font = 'bold 18px Arial';
+                        context.textAlign = 'left';
+                        context.textBaseline = 'middle';
+                        context.fillStyle = 'white';  // a color name or by using rgb/rgba/hex values
+                        context.fillText(shieldTime.toString(), 690, 20);
+                        context.drawImage(sh, 650, 1, 35, 38);
+                    }
+
+                    if(flag == 0){
+                        context.font = 'bold 24px Arial';
+                        context.textAlign = 'center';
+                        context.textBaseline = 'middle';
+                        context.fillStyle = 'red';  // a color name or by using rgb/rgba/hex values
+                        context.fillText('\"PRESS ENTER TO START\"', 560, 320); // text and position
+                        context.drawImage(logo, 430, 150, 250, 150);
+                        timer.startCount();
+                    }else if(flag == 2){
+                        context.font = 'bold 24px Arial';
+                        context.textAlign = 'center';
+                        context.textBaseline = 'middle';
+                        context.fillStyle = 'red';  // a color name or by using rgb/rgba/hex values
+                        context.fillText('GAME OVER', 540, 250); // text and position
+                    }
+                     else{
+                        var dx = mouse.x - ship.x,
+                            dy = mouse.y - ship.y,
+                            angle = Math.atan2(dy, dx);
+                            
+
+                        ship.rotation = angle; //radians
+                        
+                        ship.draw(context);
+                        ship.update(input,mouse.x, mouse.y);
+                        console.log(ship.balls.length);
+
+                        var i = balls.length;
+                        while (i--) {
+                        drawBall(balls[i], i);
+                        }
+                        
+                        ObsFireDraw(context);
+                        ObsFireUpdate();
+
+                        var i2 = balls2.length;
+                        while (i2--) {
+                        drawBall(balls2[i2], i2);
+                        }
+
+                        var i3 = balls3.length;
+                        while (i3--) {
+                        drawBall(balls3[i3], i3);
+                        }
+
+                        var is = shields.length;
+                        while(is--){
+                            drawBall(shields[is], is);
+                        }
+
+                        var ip = powerUps.length;
+                        while(ip--){
+                            drawBall(powerUps[ip], ip);
+                        }
+
+                        
+
+                    }
+                    console.log(ship.shield);
+                                 
+                }());
+            };
+
+
+            
+        </script>
+    
+    
+</body>
+</html>
